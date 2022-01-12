@@ -1,0 +1,8 @@
+{
+  "name": "02ExpressRedis",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "4.17.2",
+    "redis": "^4.0.1"
+  }
+}
