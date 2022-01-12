@@ -1,32 +1,57 @@
 const express = require("express")
 const redis = require("redis")
-
-const app = express()
-const port = 3000
+const {response} = require("express");
 
 const client = redis.createClient({host: "localhost"})
-client.on('error', err => {
-    console.log('Error ' + err);
+client.on("error", err => {
+    console.log("Error: " + err);
 });
 
 client.connect().catch((error) => {
     console.log("Connect error: " + error)
+    process.exit(1)
 })
 
-app.get('/', async (req, res) => {
-    await client.set("bla", req.query.bla).then(() => {
-        console.log("Var set")
-    }).catch((error) => {
-        console.log("Error: " + error)
+const app = express()
+const port = 3000
+
+async function RedisTimeout(timeoutMs, redisCall) {
+    return new Promise((resolve, reject) => {
+        var timer = setTimeout(() => {
+            reject("Timeout error")
+        }, timeoutMs)
+
+        redisCall().then((result) => {
+            resolve(result)
+            clearTimeout(timer)
+        }).catch((error) => {
+            reject(error)
+            clearTimeout(timer)
+        })
     })
+}
 
-    res.send('Value saved' + req.query.bla)
-})
-
-app.get('/get',async (req, res) => {
+app.get("/", async (req, res) => {
     let response = ""
 
-    await client.get("bla").then((result) => {
+    await RedisTimeout(2000, () => {
+        return client.set("bla", req.query.bla)
+    }).then((result) => {
+        response = "Value saved" + req.query.bla
+    }).catch((error) => {
+        console.log("Error: " + error)
+        response = "Error encountered: " + error
+    })
+
+    res.send(response)
+})
+
+app.get("/get",async (req, res) => {
+    let response = ""
+
+    await RedisTimeout(2000, () => {
+        return client.get("bla")
+    }).then((result) => {
         response = "The secret var is: " + result
     }).catch((error) => {
         console.log("Get error: " + error)
